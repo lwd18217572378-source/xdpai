@@ -179,11 +179,73 @@ textarea::placeholder{color:var(--muted)}
 /* INFO ROW */
 .info-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px}
 .ir-l{color:var(--muted2)}.ir-r{font-weight:700;color:#fff}
+
+/* ── LOGIN ── */
+#login-screen{
+  position:fixed;inset:0;z-index:10000;
+  background:#050d1a;
+  display:flex;align-items:center;justify-content:center;
+}
+#login-screen::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.12) 0,rgba(0,0,0,.12) 1px,transparent 1px,transparent 3px);
+  opacity:.35;pointer-events:none;
+}
+.login-box{
+  position:relative;z-index:1;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(0,212,255,.2);
+  border-radius:16px;
+  padding:40px 36px;
+  width:360px;
+  box-shadow:0 0 60px rgba(0,212,255,.1);
+  text-align:center;
+}
+.login-icon{width:56px;height:56px;background:linear-gradient(135deg,#00d4ff,#1a7fff);border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:#000;margin:0 auto 16px;box-shadow:0 0 24px rgba(0,212,255,.4)}
+.login-title{font-family:monospace;font-size:16px;color:#fff;letter-spacing:2px;font-weight:700;margin-bottom:4px}
+.login-sub{font-size:11px;color:#3d6080;letter-spacing:1px;margin-bottom:28px}
+.login-input-wrap{position:relative;margin-bottom:12px}
+.login-input{
+  width:100%;background:rgba(0,0,0,.4);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:8px;padding:12px 44px 12px 14px;
+  color:#fff;font-size:14px;outline:none;letter-spacing:2px;
+  transition:border-color .2s;
+}
+.login-input:focus{border-color:rgba(0,212,255,.4)}
+.login-input::placeholder{letter-spacing:.5px;color:#3d6080}
+.toggle-pw{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:#3d6080;cursor:pointer;font-size:14px;padding:2px}
+.toggle-pw:hover{color:#fff}
+.login-btn{
+  width:100%;padding:12px 0;border:none;border-radius:8px;
+  background:linear-gradient(90deg,#005580,#00d4ff);
+  color:#000;font-size:13px;font-weight:700;cursor:pointer;
+  letter-spacing:1px;transition:opacity .2s;margin-top:4px;
+}
+.login-btn:hover{opacity:.88}
+.login-err{font-size:12px;color:#ff4060;margin-top:10px;min-height:18px;letter-spacing:.5px}
+.login-footer{font-size:10px;color:#3d6080;margin-top:20px;line-height:1.8}
 </style>
 </head>
 <body>
 
-<div id="loading">
+<!-- ── LOGIN ── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-icon">东</div>
+    <div class="login-title">沪牌小东 · 监控中心</div>
+    <div class="login-sub">INTERNAL SYSTEM · 内部专用</div>
+    <div class="login-input-wrap">
+      <input class="login-input" id="pw-input" type="password" placeholder="请输入访问密码" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="toggle-pw" onclick="togglePw()">👁</button>
+    </div>
+    <button class="login-btn" onclick="doLogin()">进 入 系 统</button>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-footer">仅限内部人员使用<br>未经授权访问将被记录</div>
+  </div>
+</div>
+
+<div id="loading"
   <div class="spin">🚗</div>
   <div style="font-family:monospace;color:#00d4ff;font-size:13px;letter-spacing:2px">沪牌小东 · 监控中心</div>
   <div style="color:#3d6080;font-size:11px">正在从云端同步数据...</div>
@@ -435,8 +497,8 @@ textarea::placeholder{color:var(--muted)}
 // ══════════════════════════════════════════
 // ⚠️  替换这里两个值为你的 Supabase 配置
 // ══════════════════════════════════════════
-const SUPABASE_URL = 'https://qozpxqlkmalsbbahvovh.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_Yiydbn_E348io7z3rF6WMQ_gg5Qfs__';
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
 // ══════════════════════════════════════════
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -449,13 +511,7 @@ const PROXIES = [
 ];
 
 // ── INIT ──────────────────────────────────
-window.addEventListener('DOMContentLoaded', async ()=>{
-  clockStart();
-  logStart();
-  await Promise.all([loadStats(), loadWinList(), loadImgIndex()]);
-  document.getElementById('loading').style.display='none';
-  setSyncDot('ok','云端已连接');
-});
+window.addEventListener('DOMContentLoaded', ()=>{ checkAuth(); });
 
 // ── CLOCK ─────────────────────────────────
 function clockStart(){
@@ -722,6 +778,59 @@ function updateImgStatus(){
   const e=document.getElementById('qs-img');
   if(e){e.textContent=cnt?`${cnt} 张`:'未加载';e.style.color=cnt?'var(--green)':'var(--muted)';}
   document.getElementById('img-cnt').textContent=cnt;
+}
+
+// ── LOGIN ─────────────────────────────────
+// ⚠️ 在这里修改密码，改完重新上传 GitHub 即可
+const PASSWORDS = ['xdpai2026', 'xiaodong888'];  // 可以设多个，员工用不同密码
+
+function doLogin(){
+  const pw = document.getElementById('pw-input').value.trim();
+  const err = document.getElementById('login-err');
+  if(!pw){ err.textContent='请输入密码'; return; }
+  if(PASSWORDS.includes(pw)){
+    // 记住登录状态（关闭标签页后失效，重开需重新输入）
+    sessionStorage.setItem('xd_auth', btoa(pw));
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('loading').style.display='flex';
+    initApp();
+  } else {
+    err.textContent='密码错误，请重试';
+    document.getElementById('pw-input').value='';
+    document.getElementById('pw-input').focus();
+    // 抖动效果
+    const box = document.querySelector('.login-box');
+    box.style.animation='none';
+    box.style.transform='translateX(-8px)';
+    setTimeout(()=>{ box.style.transform='translateX(8px)'; }, 80);
+    setTimeout(()=>{ box.style.transform=''; }, 160);
+  }
+}
+
+function togglePw(){
+  const inp = document.getElementById('pw-input');
+  inp.type = inp.type==='password' ? 'text' : 'password';
+}
+
+// 检查是否已登录（同一个标签页内刷新不用重新输入）
+function checkAuth(){
+  const auth = sessionStorage.getItem('xd_auth');
+  if(auth && PASSWORDS.includes(atob(auth))){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('loading').style.display='flex';
+    initApp();
+  } else {
+    // 显示登录框，聚焦输入
+    setTimeout(()=>{ const e=document.getElementById('pw-input'); if(e)e.focus(); }, 100);
+  }
+}
+
+async function initApp(){
+  clockStart();
+  logStart();
+  await Promise.all([loadStats(), loadWinList(), loadImgIndex()]);
+  document.getElementById('loading').style.display='none';
+  setSyncDot('ok','云端已连接');
 }
 </script>
 </body>
